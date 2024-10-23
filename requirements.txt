@@ -1,0 +1,10 @@
+Flask
+pydantic
+python-dotenv
+langchain
+langchain-openai
+langchain-community
+langchain-core
+openai
+pyodbc
+SQLAlchemy
