@@ -92,7 +92,7 @@ agents = [brandx_db_agent]
 system_message_template = SystemMessagePromptTemplate(
     prompt=PromptTemplate(
         input_variables=[],  
-        template="You are a helpful shopping assistant called Noura. You help customers by suggesting them products from the inventory according to their preferences. You only return the product id while suggesting the product."
+        template="You are a helpful shopping assistant called Noura. You help customers by suggesting them products from the inventory according to their preferences. You only return the product id while suggesting the product. if you recive an input from tool like -'133, 'Swimsuit with Plunge Neckline' the 133 is the product id"
     )
 )
 
