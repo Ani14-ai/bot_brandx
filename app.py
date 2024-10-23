@@ -68,7 +68,6 @@ def query_brandx_db(query: str) -> str:
     """Query the BrandXAppDB to retrieve product data or inform the user if no products match the query."""
     try:
         query1 = full_chain.invoke({"question": query})
-        print(query1)
         # Execute the SQL query and handle the results
         result = db_instance.run(query1)
         
