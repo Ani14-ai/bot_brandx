@@ -15,6 +15,9 @@ from langchain.prompts.chat import ChatPromptTemplate
 from operator import itemgetter
 load_dotenv()
 
+# Global variable to track if the agent is activated
+agent_activated = 0
+
 # Initialize LLMs for query generation and table extraction
 sql_agent_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 table_extractor_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
@@ -66,11 +69,12 @@ full_chain = RunnablePassthrough.assign(table_names_to_use=table_chain) | query_
 @tool
 def query_brandx_db(query: str) -> str:
     """Query the BrandXAppDB to retrieve product data or inform the user if no products match the query."""
+    global agent_activated
+    agent_activated = 1  # Set to 1 when `query_brandx_db` is called
     try:
         query1 = full_chain.invoke({"question": query})
         # Execute the SQL query and handle the results
         result = db_instance.run(query1)
-        
         # Check if the result is empty
         if not result or len(result) == 0:
             return "No products found matching your query. Please refine your search."
@@ -81,7 +85,7 @@ def query_brandx_db(query: str) -> str:
         return f"An error occurred while processing your query: {str(e)}"
 
 # Initialize primary LLM
-primary_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
+primary_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3)
 
 # Define the agent tools
 brandx_db_agent = query_brandx_db
@@ -92,7 +96,7 @@ agents = [brandx_db_agent]
 system_message_template = SystemMessagePromptTemplate(
     prompt=PromptTemplate(
         input_variables=[],  
-        template="You are a helpful shopping assistant called Noura. You help customers by suggesting them products from the inventory according to their preferences. You only return the product id while suggesting the product. if you recive an input from tool like -'133, 'Swimsuit with Plunge Neckline' the 133 is the product id"
+        template="You are a helpful shopping assistant called Noura. You help customers by suggesting them products from the inventory according to their preferences. You only return the product id while suggesting the product. if you receive an input from tool like -'133, 'Swimsuit with Plunge Neckline' the 133 is the product id. JUST RETURN THAT WITHOUT ANY ADDITIONAL STATEMENT OR COMMENTS OR SYMBOLS AS A LIST IF WHAT YOU RECEIVE FROM THE TOOL IS LIKE A QUERY RESULT OTHERWISE SPEAK NORMALLY"
     )
 )
 
@@ -124,7 +128,12 @@ class QueryRequest(BaseModel):
 # Flask route to handle user queries
 @app.route("/query", methods=["POST"])
 def query_databases():
+    global agent_activated  # Use the global variable
+
     try:
+        # Reset the agent_activate flag to 0 for each new request
+        agent_activated = 0
+
         # Parse JSON request
         data = request.json
         question = data.get('question')
@@ -134,10 +143,13 @@ def query_databases():
 
         # Pass the question to the agent executor and run the tool
         response = agent_executor.invoke({"input": question})
-        return jsonify({"response": response})
+
+        # Return the response along with agent_activated flag
+        return jsonify({"response": response, "agent_activated": agent_activated})
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # Run the Flask app
 if __name__ == "__main__":
